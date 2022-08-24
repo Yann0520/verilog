@@ -340,19 +340,25 @@ module rx (
 	output	reg	[3:0]	comp_count = -1
 	);
 	
-	reg [1:0] 	rx_state = 0;
-	reg	[12:0]	clock_counter = 0;
+	reg [3:0] 	rx_state = 0;
+	reg	[12:0]	clock_counter = 0; 
 	reg			bit_clock = 0;
-	reg [4:0]	i = 0;
-	reg	[7:0]	rx_data2 = 0;
-	reg	[10:0]	clocker = 0;
-	reg	[7:0]	rx_data3 = 0;
+	reg [2:0]	i = 0;
 	reg			rx_complete = 1;
+	reg [07:0] rx_buffer;
+	reg	[10:0]	clocker = 0;
+	reg	[7:0]	rx_data2 = 0;
 	
 	parameter	idle	=	0;
-	parameter	start	=	1;
-	parameter	data	=	2;
-	parameter	stop	=	3;
+	parameter	s00		=	1;
+	parameter	s01		=	2;
+	parameter	s02		=	3;
+	parameter	s03		=	4;
+	parameter	s04		=	5;
+	parameter	s05		=	6;
+	parameter	s06		=	7;
+	parameter	s07		=	8;
+	parameter	stop	=	9;
 	
 	localparam clock_div = 625;
 	
@@ -387,7 +393,7 @@ module rx (
 	always@(posedge bit_clock)
 		if(!reset)
 			clocker <= -1;
-		else if(rx_state == idle || rx_state == start)
+		else if(rx_state == idle)
 			if(clocker != 20)
 				clocker <= clocker + 1;
 			else
@@ -401,7 +407,7 @@ module rx (
 		else if(rx_complete)
 			rx_data <= 8'h00;
 		else
-			rx_data <= rx_data3;
+			rx_data <= rx_data2;
 			
 	always@(posedge bit_clock)
 		if(!reset)
@@ -421,42 +427,71 @@ module rx (
 			else
 				begin
 					case(rx_state)
-						idle:
-						begin
-							rx_state <= start;
-						end
-						
-						start:
-						begin
-							if(rx == 0)
-								rx_state <= data;
-							else
-								rx_state <= start;
-						end
-						
-						data:
-						begin
-							rx_data2[i] <= rx;
-							if(i<7)
-								begin
-									i <= i + 1;
-									rx_state <= data;
-									
-								end
-							else
-								begin
-									i <= 0;
-									rx_state <= stop;
-									
-									
-								end
-						end
-						stop:
-							begin
-								rx_data3 <= rx_data2;
-								rx_state <= idle;
-							end
-					endcase
+                idle:
+                begin
+                    if (rx == 0)
+                        rx_state <= s00;
+                end
+
+                s00:
+                begin
+                    rx_buffer[0] <= rx;
+                    rx_state     <= s01;
+                end
+
+                s01:
+                begin
+                    rx_buffer[1] <= rx;
+                    rx_state     <= s02;
+                end
+
+                s02:
+                begin
+                    rx_buffer[2] <= rx;
+                    rx_state     <= s03;
+                end
+
+                s03:
+                begin
+                    rx_buffer[3] <= rx;
+                    rx_state     <= s04;
+                end
+
+                s04:
+                begin
+                    rx_buffer[4] <= rx;
+                    rx_state     <= s05;
+                end
+
+                s05:
+                begin
+                    rx_buffer[5] <= rx;
+                    rx_state     <= s06;
+                end
+
+                s06:
+                begin
+                    rx_buffer[6] <= rx;
+                    rx_state     <= s07;
+                end
+
+                s07:
+                begin
+                    rx_buffer[7] <= rx;
+                    rx_state     <= stop;
+                end
+
+                stop:
+                begin
+                    rx_data2  <= rx_buffer;
+                    rx_state <= idle;
+                end
+
+                default:
+                begin
+                    rx_state <= idle;
+                end
+            endcase
 				end				
 		end				
 endmodule

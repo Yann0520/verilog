@@ -9,7 +9,8 @@ module rx (
 	output	reg			vctr_in = 0,
 	output	reg	[7:0]	rx_data_out,
 	output	reg	[7:0]	rx_data_in,
-	output	reg	rx_vctr_comp = 0
+	output		rx_vctr_comp,
+	input		rx_ch_comp
 	);
 	
 	reg [3:0] 	rx_state = 0;
@@ -22,6 +23,7 @@ module rx (
 
 	reg	[10:0]	clocker = 0;
 	assign 		clock_div = 625;
+	assign 		rx_vctr_comp = rx_vctr_comp_in & rx_vctr_comp_out;
 
 	
 	parameter	idle	=	0;
@@ -71,22 +73,22 @@ module rx (
 		else 
 			clocker <= -1;
 			
-	always@(posedge bit_clock)
-		if(rx_data == 8'hA5 && rx_vctr_comp_in)
+	always@(posedge clock)
+		if(rx_data == 8'hA5 && rx_vctr_comp_in == 1)
 			begin
 				vctr_out <= 1;
 				vctr_in <= 0;
 			end
-		else if(rx_data == 8'h00 && rx_vctr_comp_out)
+		else if(rx_data == 8'h00 && rx_vctr_comp_out == 1)
 			begin
 				vctr_in <= 1;
 				vctr_out <= 0;
 			end
-		//else if(rx_vctr_comp_out && rx_vctr_comp_in)
-			//begin
-				//vctr_out <= 0;
-				//vctr_in <= 0;
-			//end
+		else if(rx_vctr_comp)
+			begin
+				vctr_in <= 0;
+				vctr_out <= 0;
+			end
 		else
 			begin
 				vctr_out <= vctr_out;
@@ -102,7 +104,7 @@ module rx (
 		else
 			begin
 				rx_data_out <= rx_data_out;
-				rx_data_out <= rx_data_in;
+				rx_data_in <= rx_data_in;
 			end
 	
 			

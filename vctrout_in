@@ -5,24 +5,30 @@ module vctrin(
 	output	reg		vctr_comp_in = 1,
 	output	reg	[7:0]	vctrin,
 	output			vctr_comp_out,
+	output			ch_comp,
 	output	[7:0]	vctr_data_out
 	);
 	
 	wire	[7:0]	vctrout_ch0;
 	wire	[7:0]	vctrout_ch1;
 	wire	[7:0]	vctrout_ch2;
+	wire	[7:0]	vctrout_ch3;
 	wire	[7:0]	vctrin_ch0;
 	wire	[7:0]	vctrin_ch1;
 	wire	[7:0]	vctrin_ch2;
+	wire	[7:0]	vctrin_ch3;
+	reg				checker = 0;
 	
 	reg	[31:0]	clock_counter = 0; 
 	reg			bit_clock = 0;
 	localparam clock_div = 625;
 	reg	[5:0]	clocker = -1;
+	reg	[5:0]	clocker2 = -1;
 	
 	assign vctrin_ch0 = vctrout_ch0;
 	assign vctrin_ch1 = vctrout_ch1;
 	assign vctrin_ch2 = vctrout_ch2;
+	assign vctrin_ch3 = vctrout_ch3;
 	
 	always@(posedge clock)
 		if(!nrst) begin
@@ -52,38 +58,71 @@ module vctrin(
 			bit_clock <= bit_clock;
 			
 	always@(posedge bit_clock)
-		if(vctr_data_in == 8'h00)
+		if(vctr_data_in === 8'h00)
+			if(clocker != 17)
+				begin
+					clocker <= clocker + 1;
+					checker <= 1;
+					if(clocker2 == 18)
+						vctrin <= vctrin_ch0;
+					else
+						vctrin <= vctrin;
+				end
+			else
+				clocker <= -1;
+
+		else if(vctr_data_in === 8'h01)
 			begin
-				vctrin <= vctrin_ch0;
-				vctr_comp_in <= 0;
-				clocker <= 0;
+				checker <= 1;
+				if(clocker2 == 18)
+						vctrin <= vctrin_ch1;
+					else
+						vctrin <= vctrin;				
 			end
-		else if(vctr_data_in == 8'h01)
+		else if(vctr_data_in === 8'h02)
 			begin
-				vctrin <= vctrin_ch1;
-				vctr_comp_in <= 0;
-				clocker <= 0;
+				checker <= 1;
+				if(clocker2 == 18)
+						vctrin <= vctrin_ch2;
+					else
+						vctrin <= vctrin;
 			end
-		else if(vctr_data_in == 8'h02)
+		else if(vctr_data_in === 8'h03)
 			begin
-				vctrin <= vctrin_ch2;
-				vctr_comp_in <= 0;
-				clocker <= 0;
-			end
-		else if(clocker < 15)
-			clocker <= clocker + 1;
-		else if(clocker == 15)
-			begin
-				clocker <= clocker;
-				vctr_comp_in <= 1;
+				checker <= 1;
+				if(clocker2 == 18)
+						vctrin <= vctrin_ch3;
+					else
+						vctrin <= vctrin;
 			end
 		else 
 			begin
 				vctrin <= vctrin;
-				vctr_comp_in <= vctr_comp_in;
+				//vctr_comp_in <= 1;
+				clocker <= -1;
+				checker <= 0;
 			end
 			
-	vctrout VECTOR_OUT (clock,nrst,vctr_data_out, vctr_comp_out, vctrout_ch0, vctrout_ch1,vctrout_ch2);
+	always@(posedge bit_clock)
+		if(clocker <= 17 && checker == 1)
+			begin
+				if(clocker2 !=21)
+					clocker2 <= clocker2 + 1;
+				else
+					clocker2 <= clocker2;
+			end
+		else if(clocker == 0)
+			clocker2 <= 0;
+		else
+			clocker2 <= -1;
+	
+	always@(posedge bit_clock)
+		if(clocker < 17 || clocker2 < 5)
+			vctr_comp_in <= 0;
+		else
+			vctr_comp_in <= 1;
+			
+	vctrout VECTOR_OUT (clock,nrst,vctr_data_out, vctr_comp_out,ch_comp, vctrout_ch0, vctrout_ch1,vctrout_ch2,vctrout_ch3);
 
 endmodule
 module vctrout(
@@ -91,9 +130,11 @@ module vctrout(
 	input			nrst,
 	input	[7:0]	vctr_data_out,
 	output			vctr_comp_out,
+	output			ch_comp,
 	output	reg	[7:0]	vctrout_ch0	= 0,
 	output	reg	[7:0]	vctrout_ch1	= 0,
-	output	reg	[7:0]	vctrout_ch2	= 0
+	output	reg	[7:0]	vctrout_ch2	= 0,
+	output	reg	[7:0]	vctrout_ch3	= 0
 	);
 	
 	reg	[31:0]	clock_counter = 0; 
@@ -101,11 +142,15 @@ module vctrout(
 	reg	[5:0]	clocker0 = -1;
 	reg	[5:0]	clocker1 = -1;
 	reg	[5:0]	clocker2 = -1;
+	reg	[5:0]	clocker3 = -1;
 	reg			ch0_comp = 1;
 	reg			ch1_comp = 1;
 	reg			ch2_comp = 1;
+	reg			ch3_comp = 1;
+	reg			vctr_complete_out = 1;
 	
-	assign vctr_comp_out = ch0_comp & ch1_comp & ch2_comp;
+	assign ch_comp = ch0_comp & ch1_comp & ch2_comp & ch3_comp;
+	assign vctr_comp_out = ch_comp & vctr_complete_out;
 	
 	localparam clock_div = 625;
 	
@@ -127,6 +172,15 @@ module vctrout(
 			bit_clock <= ~bit_clock;
 		else
 			bit_clock <= bit_clock;
+	
+	always@(posedge bit_clock)
+		if(vctr_data_out == 8'ha5)
+			vctr_complete_out <= 0;
+		else if(ch_comp)
+			vctr_complete_out <= 1;
+		else
+			vctr_complete_out <= ch_comp;
+			
 			
 	always@(posedge bit_clock)
 		if(vctr_data_out == 8'h00)
@@ -136,14 +190,14 @@ module vctrout(
 			end
 		else
 			begin
-				if(clocker0 < 15)
+				if(clocker0 < 10)
 					clocker0 <= clocker0 + 1;
-				else if(clocker0 == 15)
+				else if(clocker0 == 10)
 					ch0_comp <= 1;
 				else
 					begin
 						clocker0 <= clocker0;
-						ch0_comp <= ch0_comp;
+						ch0_comp <= 1;
 					end
 			end
 				
@@ -155,14 +209,14 @@ module vctrout(
 			end
 		else
 			begin
-				if(clocker1 < 15)
+				if(clocker1 < 10)
 					clocker1 <= clocker1 + 1;
-				else if(clocker1 == 15)
+				else if(clocker1 == 10)
 					ch1_comp <= 1;
 				else
 					begin
 						clocker1 <= clocker1;
-						ch1_comp <= ch1_comp;
+						ch1_comp <= 1;
 					end
 			end		
 				
@@ -174,14 +228,33 @@ module vctrout(
 			end
 		else
 			begin
-				if(clocker2 < 15)
+				if(clocker2 < 10)
 					clocker2 <= clocker2 + 1;
-				else if(clocker2 == 15)
+				else if(clocker2 == 10)
 					ch2_comp <= 1;
 				else
 					begin
 						clocker2 <= clocker2;
-						ch2_comp <= ch2_comp;
+						ch2_comp <= 1;
+					end
+			end
+			
+	always@(posedge bit_clock)
+		if(vctr_data_out == 8'h03)
+			begin
+				clocker3 <= 0;
+				ch3_comp <= 0;
+			end
+		else
+			begin
+				if(clocker3 < 10)
+					clocker3 <= clocker3 + 1;
+				else if(clocker3 == 10)
+					ch3_comp <= 1;
+				else
+					begin
+						clocker3 <= clocker3;
+						ch3_comp <= 1;
 					end
 			end
 
@@ -193,11 +266,14 @@ module vctrout(
 			vctrout_ch1 <= vctr_data_out;
 		else if(clocker2 <= 3 && ch2_comp == 0)
 			vctrout_ch2 <= vctr_data_out;
+		else if(clocker3 <= 3 && ch3_comp == 0)
+			vctrout_ch3 <= vctr_data_out;
 		else	
 			begin
 				vctrout_ch0 <= vctrout_ch0;
 				vctrout_ch1 <= vctrout_ch1;
 				vctrout_ch2 <= vctrout_ch2;
+				vctrout_ch3 <= vctrout_ch3;
 			end
 		
 endmodule

@@ -1,0 +1,203 @@
+module vctrin(
+	input			clock,
+	input			nrst,
+	input	[7:0]	vctr_data_in,
+	output	reg		vctr_comp_in = 1,
+	output	reg	[7:0]	vctrin,
+	output			vctr_comp_out,
+	output	[7:0]	vctr_data_out
+	);
+	
+	wire	[7:0]	vctrout_ch0;
+	wire	[7:0]	vctrout_ch1;
+	wire	[7:0]	vctrout_ch2;
+	wire	[7:0]	vctrin_ch0;
+	wire	[7:0]	vctrin_ch1;
+	wire	[7:0]	vctrin_ch2;
+	
+	reg	[31:0]	clock_counter = 0; 
+	reg			bit_clock = 0;
+	localparam clock_div = 625;
+	reg	[5:0]	clocker = -1;
+	
+	assign vctrin_ch0 = vctrout_ch0;
+	assign vctrin_ch1 = vctrout_ch1;
+	assign vctrin_ch2 = vctrout_ch2;
+	
+	always@(posedge clock)
+		if(!nrst) begin
+			clock_counter <= 0;
+			end
+		else if (clock_counter == clock_div) begin
+			clock_counter <= 0;
+			end
+		else begin
+			clock_counter <= clock_counter + 1;
+			end
+			
+	always@(posedge clock)
+		if(!nrst)
+			bit_clock <= 0;
+		else if (clock_counter == clock_div)
+			bit_clock <= ~bit_clock;
+		else
+			bit_clock <= bit_clock;
+	
+	always@(posedge clock)
+		if(!nrst)
+			bit_clock <= 0;
+		else if (clock_counter == clock_div)
+			bit_clock <= ~bit_clock;
+		else
+			bit_clock <= bit_clock;
+			
+	always@(posedge bit_clock)
+		if(vctr_data_in == 8'h00)
+			begin
+				vctrin <= vctrin_ch0;
+				vctr_comp_in <= 0;
+				clocker <= 0;
+			end
+		else if(vctr_data_in == 8'h01)
+			begin
+				vctrin <= vctrin_ch1;
+				vctr_comp_in <= 0;
+				clocker <= 0;
+			end
+		else if(vctr_data_in == 8'h02)
+			begin
+				vctrin <= vctrin_ch2;
+				vctr_comp_in <= 0;
+				clocker <= 0;
+			end
+		else if(clocker < 15)
+			clocker <= clocker + 1;
+		else if(clocker == 15)
+			begin
+				clocker <= clocker;
+				vctr_comp_in <= 1;
+			end
+		else 
+			begin
+				vctrin <= vctrin;
+				vctr_comp_in <= vctr_comp_in;
+			end
+			
+	vctrout VECTOR_OUT (clock,nrst,vctr_data_out, vctr_comp_out, vctrout_ch0, vctrout_ch1,vctrout_ch2);
+
+endmodule
+module vctrout(
+	input			clock,
+	input			nrst,
+	input	[7:0]	vctr_data_out,
+	output			vctr_comp_out,
+	output	reg	[7:0]	vctrout_ch0	= 0,
+	output	reg	[7:0]	vctrout_ch1	= 0,
+	output	reg	[7:0]	vctrout_ch2	= 0
+	);
+	
+	reg	[31:0]	clock_counter = 0; 
+	reg			bit_clock = 0;
+	reg	[5:0]	clocker0 = -1;
+	reg	[5:0]	clocker1 = -1;
+	reg	[5:0]	clocker2 = -1;
+	reg			ch0_comp = 1;
+	reg			ch1_comp = 1;
+	reg			ch2_comp = 1;
+	
+	assign vctr_comp_out = ch0_comp & ch1_comp & ch2_comp;
+	
+	localparam clock_div = 625;
+	
+	always@(posedge clock)
+		if(!nrst) begin
+			clock_counter <= 0;
+			end
+		else if (clock_counter == clock_div) begin
+			clock_counter <= 0;
+			end
+		else begin
+			clock_counter <= clock_counter + 1;
+			end
+			
+	always@(posedge clock)
+		if(!nrst)
+			bit_clock <= 0;
+		else if (clock_counter == clock_div)
+			bit_clock <= ~bit_clock;
+		else
+			bit_clock <= bit_clock;
+			
+	always@(posedge bit_clock)
+		if(vctr_data_out == 8'h00)
+			begin
+				clocker0 <= 0;
+				ch0_comp <= 0;
+			end
+		else
+			begin
+				if(clocker0 < 15)
+					clocker0 <= clocker0 + 1;
+				else if(clocker0 == 15)
+					ch0_comp <= 1;
+				else
+					begin
+						clocker0 <= clocker0;
+						ch0_comp <= ch0_comp;
+					end
+			end
+				
+	always@(posedge bit_clock)
+		if(vctr_data_out == 8'h01)
+			begin
+				clocker1 <= 0;
+				ch1_comp <= 0;
+			end
+		else
+			begin
+				if(clocker1 < 15)
+					clocker1 <= clocker1 + 1;
+				else if(clocker1 == 15)
+					ch1_comp <= 1;
+				else
+					begin
+						clocker1 <= clocker1;
+						ch1_comp <= ch1_comp;
+					end
+			end		
+				
+	always@(posedge bit_clock)
+		if(vctr_data_out == 8'h02)
+			begin
+				clocker2 <= 0;
+				ch2_comp <= 0;
+			end
+		else
+			begin
+				if(clocker2 < 15)
+					clocker2 <= clocker2 + 1;
+				else if(clocker2 == 15)
+					ch2_comp <= 1;
+				else
+					begin
+						clocker2 <= clocker2;
+						ch2_comp <= ch2_comp;
+					end
+			end
+
+				
+	always@(posedge bit_clock)
+		if(clocker0 <= 3 && ch0_comp == 0)
+			vctrout_ch0 <= vctr_data_out;
+		else if(clocker1 <= 3 && ch1_comp == 0)
+			vctrout_ch1 <= vctr_data_out;
+		else if(clocker2 <= 3 && ch2_comp == 0)
+			vctrout_ch2 <= vctr_data_out;
+		else	
+			begin
+				vctrout_ch0 <= vctrout_ch0;
+				vctrout_ch1 <= vctrout_ch1;
+				vctrout_ch2 <= vctrout_ch2;
+			end
+		
+endmodule

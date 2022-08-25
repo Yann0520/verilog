@@ -11,6 +11,8 @@ module vctr(
 	wire vctr_complete;
 	wire [7:0]	vctr_data_out;
 	wire [7:0]	vctr_data_in;
+	wire		rx_ch_comp;
+	wire		ch_comp;
 	
 	rx RX(
 	.nrst(nrst),
@@ -24,7 +26,8 @@ module vctr(
 //	.vctr_complete(vctr_complete),
 	.rx_vctr_comp(rx_vctr_comp),
 	.rx_vctr_comp_out(rx_vctr_comp_out),
-	.rx_vctr_comp_in(rx_vctr_comp_in)
+	.rx_vctr_comp_in(rx_vctr_comp_in),
+	.rx_ch_comp(rx_ch_comp)
 	);
 	
 	
@@ -35,14 +38,14 @@ module vctr(
 	.vctr_comp_in(vctr_comp_in),
 	.vctrin(vctrin),
 	.vctr_comp_out(vctr_comp_out),
-	.vctr_data_out(vctr_data_out)
+	.vctr_data_out(vctr_data_out),
+	.ch_comp(ch_comp)
 	);
 	
 	assign vctr_data_out = rx_data_out;
 	assign vctr_data_in = rx_data_in;
 	assign rx_vctr_comp_in = vctr_comp_in;
 	assign rx_vctr_comp_out = vctr_comp_out;
+	assign rx_ch_comp = ch_comp;
 	
 endmodule
-	
-	

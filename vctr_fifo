@@ -1,0 +1,84 @@
+module vctr_fifo(
+	input			clock,
+	input			reset,
+	input	[7:0]	vctr_byte0,
+	input	[7:0]	vctr_byte1,
+	input	[7:0]	vctr_byte2
+	);
+	
+	reg	[12:0]	clock_counter = 0; 
+	reg			bit_clock = 0;
+	reg	[7:0]	vctr_ch0 = 0;
+	reg	[7:0]	vctr_ch1 = 0;
+	reg	[7:0]	vctr_ch2 = 0;
+	reg	[7:0]	vctr_ch3 = 0;
+	reg	[7:0]	vctrin = 0;
+	
+	localparam 	clock_div = 625;
+	
+	always@(posedge clock)
+		if(!reset) begin
+			clock_counter <= 0;
+			end
+		else if (clock_counter == clock_div) begin
+			clock_counter <= 0;
+			end
+		else begin
+			clock_counter <= clock_counter + 1;
+			end
+			
+	always@(posedge clock)
+		if(!reset)
+			bit_clock <= 0;
+		else if (clock_counter == clock_div)
+			bit_clock <= ~bit_clock;
+		else
+			bit_clock <= bit_clock;
+			
+	always@(posedge bit_clock)
+		if(!reset)
+			begin
+				vctr_ch0 <= 0;
+				vctr_ch1 <= 0;
+				vctr_ch2 <= 0;
+				vctr_ch3 <= 0;
+			end
+		else if(vctr_byte0 == 8'ha5)
+			if(vctr_byte1 == 8'h00)
+				vctr_ch0 <= vctr_byte2;
+			else if(vctr_byte1 == 8'h01)
+				vctr_ch1 <= vctr_byte2;
+			else if(vctr_byte1 == 8'h02)
+				vctr_ch1 <= vctr_byte2;
+			else if(vctr_byte1 == 8'h03)
+				vctr_ch1 <= vctr_byte2;
+			else 
+				begin
+					vctr_ch0 <= vctr_ch0;
+					vctr_ch1 <= vctr_ch1;
+					vctr_ch2 <= vctr_ch2;
+					vctr_ch3 <= vctr_ch3;
+				end
+		else
+			begin
+				vctr_ch0 <= vctr_ch0;
+				vctr_ch1 <= vctr_ch1;
+				vctr_ch2 <= vctr_ch2;
+				vctr_ch3 <= vctr_ch3;
+			end
+		
+	always@(posedge bit_clock)
+		if(vctr_byte0 == 8'h00)
+			if(vctr_byte1 == 8'h00)
+				vctrin <= vctr_ch0;
+			else if(vctr_byte1 == 8'h01)
+				vctrin <= vctr_ch1;
+			else if(vctr_byte1 == 8'h02)
+				vctrin <= vctr_ch2;
+			else if(vctr_byte1 == 8'h03)
+				vctrin <= vctr_ch3;
+			else 
+				vctrin <= vctrin;
+		else
+			vctrin <= vctrin;
+endmodule

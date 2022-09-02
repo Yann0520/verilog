@@ -1,0 +1,34 @@
+module	fifo_vctr(
+	input	reset,
+	input	clock,
+	input	rx
+	);
+	wire	[7:0]	byte0;
+	wire	[7:0]	byte1;
+	wire	[7:0]	byte2;
+	wire	[7:0]	vctr_byte0;
+	wire	[7:0]	vctr_byte1;
+	wire	[7:0]	vctr_byte2;
+	
+	FIFObuffer rx_fifo(
+	.reset(reset),
+	.clock(clock),
+	.rx(rx),
+	.byte0(byte0),
+	.byte1(byte1),
+	.byte2(byte2)
+	);
+	
+	vctr_fifo vctr(
+	.reset(reset),
+	.clock(clock),
+	.vctr_byte0(vctr_byte0),
+	.vctr_byte1(vctr_byte1),
+	.vctr_byte2(vctr_byte2)
+	);
+	
+	assign vctr_byte0 = byte0;
+	assign vctr_byte1 = byte1;
+	assign vctr_byte2 = byte2;
+
+endmodule

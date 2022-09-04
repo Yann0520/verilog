@@ -5,11 +5,13 @@ module tb_rx_fifo();
 	wire	rx;
 	reg 	[7:0]  tx_d;
     reg		tx_r;
+	wire	tx;
 	
 	fifo_vctr FIFO(
 	.reset(reset),
 	.clock(clock),
-	.rx(rx)
+	.rx(rx),
+	.tx(tx)
 	);
 	
 	initial begin
@@ -37,6 +39,17 @@ module tb_rx_fifo();
 		#1 tx_d = 8'h99;
 		#1 tx_r = 1;
 		
+		#37076885 tx_r = 0;
+		#1 tx_d = 8'ha5;
+		#1 tx_r = 1;
+		
+		#1970252 tx_r = 0;
+		#1 tx_d = 8'h02;
+		#1 tx_r = 1;
+		
+		#1970252 tx_r = 0;
+		#1 tx_d = 8'h77;
+		#1 tx_r = 1;
 		
 		#37076885 tx_r = 0;
 		#1 tx_d = 8'h00;

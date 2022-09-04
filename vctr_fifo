@@ -1,9 +1,10 @@
-module vctr_fifo(
+module vctr(
 	input			clock,
 	input			reset,
 	input	[7:0]	vctr_byte0,
 	input	[7:0]	vctr_byte1,
-	input	[7:0]	vctr_byte2
+	input	[7:0]	vctr_byte2,
+	output	reg [7:0]	vctr_echo = 0
 	);
 	
 	reg	[12:0]	clock_counter = 0; 
@@ -13,6 +14,26 @@ module vctr_fifo(
 	reg	[7:0]	vctr_ch2 = 0;
 	reg	[7:0]	vctr_ch3 = 0;
 	reg	[7:0]	vctrin = 0;
+	reg	[7:0]	vctrout_echo_counter = -1;
+	reg	[7:0]	vctrin_echo_counter = -1;
+	reg			ch0_out_echo = 0;
+	reg			ch1_out_echo = 0;
+	reg			ch2_out_echo = 0;
+	reg			ch3_out_echo = 0;
+	reg			ch0_in_echo = 0;
+	reg			ch1_in_echo = 0;
+	reg			ch2_in_echo = 0;
+	reg			ch3_in_echo = 0;
+	reg	[2:0]	ch0_out_counter = -1;
+	reg	[2:0]	ch1_out_counter = -1;
+	reg	[2:0]	ch2_out_counter = -1;
+	reg	[2:0]	ch3_out_counter = -1;
+	reg	[2:0]	ch0_in_counter = -1;
+	reg	[2:0]	ch1_in_counter = -1;
+	reg	[2:0]	ch2_in_counter = -1;
+	reg	[2:0]	ch3_in_counter = -1;
+	reg	[7:0]	vctr_out_echo = 0;
+	reg	[7:0]	vctr_in_echo = 0;
 	
 	localparam 	clock_div = 625;
 	
@@ -42,16 +63,44 @@ module vctr_fifo(
 				vctr_ch1 <= 0;
 				vctr_ch2 <= 0;
 				vctr_ch3 <= 0;
+				ch0_out_echo = 0;
+				ch1_out_echo = 0;
+				ch2_out_echo = 0;
+				ch3_out_echo = 0;
 			end
 		else if(vctr_byte0 == 8'ha5)
 			if(vctr_byte1 == 8'h00)
-				vctr_ch0 <= vctr_byte2;
+				begin
+					vctr_ch0 <= vctr_byte2;
+					ch0_out_echo = 1;
+					ch1_out_echo = 0;
+					ch2_out_echo = 0;
+					ch3_out_echo = 0;
+				end
 			else if(vctr_byte1 == 8'h01)
-				vctr_ch1 <= vctr_byte2;
+				begin
+					vctr_ch1 <= vctr_byte2;
+					ch0_out_echo = 0;
+					ch1_out_echo = 1;
+					ch2_out_echo = 0;
+					ch3_out_echo = 0;
+				end
 			else if(vctr_byte1 == 8'h02)
-				vctr_ch1 <= vctr_byte2;
+				begin
+					vctr_ch2 <= vctr_byte2;
+					ch0_out_echo = 0;
+					ch1_out_echo = 0;
+					ch2_out_echo = 1;
+					ch3_out_echo = 0;
+				end
 			else if(vctr_byte1 == 8'h03)
-				vctr_ch1 <= vctr_byte2;
+				begin
+					vctr_ch3 <= vctr_byte2;
+					ch0_out_echo = 0;
+					ch1_out_echo = 0;
+					ch2_out_echo = 0;
+					ch3_out_echo = 1;
+				end
 			else 
 				begin
 					vctr_ch0 <= vctr_ch0;
@@ -65,20 +114,204 @@ module vctr_fifo(
 				vctr_ch1 <= vctr_ch1;
 				vctr_ch2 <= vctr_ch2;
 				vctr_ch3 <= vctr_ch3;
+				ch0_out_echo = 0;
+				ch1_out_echo = 0;
+				ch2_out_echo = 0;
+				ch3_out_echo = 0;
 			end
 		
 	always@(posedge bit_clock)
 		if(vctr_byte0 == 8'h00)
 			if(vctr_byte1 == 8'h00)
-				vctrin <= vctr_ch0;
+				begin
+					vctrin = vctr_ch0;
+					ch0_in_echo = 1;
+					ch1_in_echo = 0;
+					ch2_in_echo = 0;
+					ch3_in_echo = 0;
+				end
 			else if(vctr_byte1 == 8'h01)
-				vctrin <= vctr_ch1;
+				begin
+					vctrin = vctr_ch1;
+					ch0_in_echo = 0;
+					ch1_in_echo = 1;
+					ch2_in_echo = 0;
+					ch3_in_echo = 0;
+				end
 			else if(vctr_byte1 == 8'h02)
-				vctrin <= vctr_ch2;
+				begin
+					vctrin = vctr_ch2;
+					ch0_in_echo = 0;
+					ch1_in_echo = 0;
+					ch2_in_echo = 1;
+					ch3_in_echo = 0;
+				end
 			else if(vctr_byte1 == 8'h03)
-				vctrin <= vctr_ch3;
-			else 
-				vctrin <= vctrin;
+				begin
+					vctrin = vctr_ch3;
+					ch0_in_echo = 0;
+					ch1_in_echo = 0;
+					ch2_in_echo = 0;
+					ch3_in_echo = 1;
+				end
+			else
+				begin
+					vctrin = vctrin;
+				end
 		else
-			vctrin <= vctrin;
+			begin
+				vctrin = vctrin;
+				ch0_in_echo = 0;
+				ch1_in_echo = 0;
+				ch2_in_echo = 0;
+				ch3_in_echo = 0;
+			end
+	
+	always@(posedge bit_clock)
+		if(ch0_out_echo)
+			if(ch0_out_counter != 3)
+				ch0_out_counter <= ch0_out_counter + 1;
+			else
+				ch0_out_counter <= ch0_out_counter;
+		else
+			ch0_out_counter <= -1;
+	
+	always@(posedge bit_clock)
+		if(ch1_out_echo)
+			if(ch1_out_counter != 3)
+				ch1_out_counter <= ch1_out_counter + 1;
+			else
+				ch1_out_counter <= ch1_out_counter;
+		else
+			ch1_out_counter <= -1;
+	
+	always@(posedge bit_clock)
+		if(ch2_out_echo)
+			if(ch2_out_counter != 3)
+				ch2_out_counter <= ch2_out_counter + 1;
+			else
+				ch2_out_counter <= ch2_out_counter;
+		else
+			ch2_out_counter <= -1;
+			
+	always@(posedge bit_clock)
+		if(ch3_out_echo)
+			if(ch3_out_counter != 3)
+				ch3_out_counter <= ch3_out_counter + 1;
+			else
+				ch3_out_counter <= ch3_out_counter;
+		else
+			ch3_out_counter <= -1;
+			
+
+	always@(posedge bit_clock)
+		if(ch0_out_counter == 0 || ch1_out_counter == 0 || ch2_out_counter == 0 ||ch3_out_counter == 0)
+			vctrout_echo_counter <= 0;	
+		else
+			if(vctrout_echo_counter < 149)
+				vctrout_echo_counter <= vctrout_echo_counter + 1;
+			else
+				vctrout_echo_counter <= vctrout_echo_counter;
+
+	always@(posedge bit_clock)
+		if(vctrout_echo_counter >= 0 && vctrout_echo_counter < 50)
+			vctr_out_echo <= 8'ha5;
+		else if(vctrout_echo_counter > 50 && vctrout_echo_counter < 100)
+			if(ch0_out_echo)
+				vctr_out_echo <= 8'h00;
+			else if(ch1_out_echo)
+				vctr_out_echo <= 8'h01;
+			else if(ch2_out_echo)
+				vctr_out_echo <= 8'h02;
+			else if(ch3_out_echo)
+				vctr_out_echo <= 8'h03;
+			else
+				vctr_out_echo <= vctr_out_echo;
+		else if(vctrout_echo_counter > 100 && vctrout_echo_counter < 149)
+			if(ch0_out_echo)
+				vctr_out_echo <= vctr_ch0;
+			else if(ch1_out_echo)
+				vctr_out_echo <= vctr_ch1;
+			else if(ch2_out_echo)
+				vctr_out_echo <= vctr_ch2;
+			else if(ch3_out_echo)
+				vctr_out_echo <= vctr_ch3;
+			else
+				vctr_out_echo <= vctr_out_echo;
+		else
+			vctr_out_echo <= vctr_out_echo;		
+	
+	always@(posedge bit_clock)
+		if(ch0_in_echo)
+			if(ch0_in_counter != 3)
+				ch0_in_counter <= ch0_in_counter + 1;
+			else
+				ch0_in_counter <= ch0_in_counter;
+		else
+			ch0_in_counter <= -1;
+	
+	always@(posedge bit_clock)
+		if(ch1_in_echo)
+			if(ch1_in_counter != 3)
+				ch1_in_counter <= ch1_in_counter + 1;
+			else
+				ch1_in_counter <= ch1_in_counter;
+		else
+			ch1_in_counter <= -1;
+	
+	always@(posedge bit_clock)
+		if(ch2_in_echo)
+			if(ch2_in_counter != 3)
+				ch2_in_counter <= ch2_in_counter + 1;
+			else
+				ch2_in_counter <= ch2_in_counter;
+		else
+			ch2_in_counter <= -1;
+			
+	always@(posedge bit_clock)
+		if(ch3_in_echo)
+			if(ch3_in_counter != 3)
+				ch3_in_counter <= ch3_in_counter + 1;
+			else
+				ch3_in_counter <= ch3_in_counter;
+		else
+			ch3_in_counter <= -1;
+			
+
+	always@(posedge bit_clock)
+		if(ch0_in_counter == 0 || ch1_in_counter == 0 || ch2_in_counter == 0 ||ch3_in_counter == 0)
+			vctrin_echo_counter <= 0;	
+		else
+			if(vctrin_echo_counter < 149)
+				vctrin_echo_counter <= vctrin_echo_counter + 1;
+			else
+				vctrin_echo_counter <= vctrin_echo_counter;
+
+	always@(posedge bit_clock)
+		if(vctrin_echo_counter >= 0 && vctrin_echo_counter < 50)
+			vctr_in_echo <= 8'h00;
+		else if(vctrin_echo_counter >= 50 && vctrin_echo_counter < 100)
+			if(ch0_in_echo)
+				vctr_in_echo <= 8'h00;
+			else if(ch1_in_echo)
+				vctr_in_echo <= 8'h01;
+			else if(ch2_in_echo)
+				vctr_in_echo <= 8'h02;
+			else if(ch3_in_echo)
+				vctr_in_echo <= 8'h03;
+			else
+				vctr_in_echo <= vctr_in_echo;
+		else if(vctrin_echo_counter >= 100 && vctrin_echo_counter < 149)
+			vctr_in_echo <= vctrin;
+		else
+			vctr_in_echo <= vctr_in_echo;				
+
+	always@(posedge bit_clock)
+		if(vctrin_echo_counter <149)
+			vctr_echo <= vctr_in_echo;
+		else if(vctrout_echo_counter <149)
+			vctr_echo <= vctr_out_echo;
+		else
+			vctr_echo <= vctr_echo;
+		
 endmodule
